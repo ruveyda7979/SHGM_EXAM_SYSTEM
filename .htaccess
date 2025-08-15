@@ -1,0 +1,57 @@
+# SHGM Exam System - Apache Configuration
+RewriteEngine On
+
+# Güvenlik için hassas dizinlere erişimi engelle
+<Files ".env">
+    Order allow,deny
+    Deny from all
+</Files>
+
+<FilesMatch "^(tn_|ha_|rp_).*\.php$">
+    Order allow,deny
+    Allow from all
+</FilesMatch>
+
+# Storage ve config klasörlerini dış erişimden koru
+RedirectMatch 403 ^/storage/.*$
+RedirectMatch 403 ^/config/.*$
+RedirectMatch 403 ^/core/.*$
+RedirectMatch 403 ^/models/.*$
+RedirectMatch 403 ^/controllers/.*$
+
+# API istekleri için yönlendirme
+RewriteRule ^api/v1/(.*)$ api/index.php [QSA,L]
+
+# Admin panel yönlendirmeleri
+RewriteRule ^admin/?(.*)$ index.php?route=admin/$1 [QSA,L]
+
+# Student panel yönlendirmeleri  
+RewriteRule ^student/?(.*)$ index.php?route=student/$1 [QSA,L]
+
+# Auth yönlendirmeleri
+RewriteRule ^auth/?(.*)$ index.php?route=auth/$1 [QSA,L]
+
+# Ana route yönlendirme
+RewriteCond %{REQUEST_FILENAME} !-f
+RewriteCond %{REQUEST_FILENAME} !-d
+RewriteRule ^(.*)$ index.php?route=$1 [QSA,L]
+
+# Dosya yükleme limitleri
+php_value upload_max_filesize 100M
+php_value post_max_size 100M
+php_value max_execution_time 300
+php_value memory_limit 256M
+
+# Hata gösterimi (production'da kapatılacak)
+php_flag display_errors On
+php_flag display_startup_errors On
+
+# Session ayarları
+php_value session.gc_maxlifetime 7200
+php_flag session.use_strict_mode On
+
+# MIME type ayarları
+AddType application/json .json
+AddType video/mp4 .mp4
+AddType audio/mpeg .mp3
+AddType audio/wav .wav
