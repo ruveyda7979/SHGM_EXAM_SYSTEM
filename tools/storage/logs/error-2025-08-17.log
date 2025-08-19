@@ -1,0 +1,1 @@
+[2025-08-17 17:25:13] SHGM Pilot Exam System.development.error.ERROR: Manual test exception from tools/error_test.php {"status":500,"file":"C:\\xampp\\htdocs\\shgm-exam-system\\tools\\error_test.php","line":49,"url":"/SHGM-EXAM-SYSTEM/tools/error_test.php","method":"GET"}

@@ -1,65 +1,61 @@
 {
-    "name": "shgm/exam-system",
-    "description": "SHGM Pilot Exam System - Pure PHP Implementation",
-    "version": "1.0.0",
-    "type": "project",
-    "keywords": ["exam", "shgm", "pilot", "assessment", "php"],
-    "license": "MIT",
-    "authors": [
-        {
-            "name": "SHGM Development Team",
-            "email": "developer@shgm.gov.tr"
-        }
+  "name": "shgm/exam-system",
+  "description": "SHGM Pilot Exam System - Pure PHP Implementation",
+  "version": "1.0.0",
+  "type": "project",
+  "keywords": ["exam", "shgm", "pilot", "assessment", "php"],
+  "license": "MIT",
+  "authors": [
+    {
+      "name": "SHGM Development Team",
+      "email": "developer@shgm.gov.tr"
+    }
+  ],
+  "require": {
+    "php": ">=7.4.0",
+    "ext-pdo": "*",
+    "ext-pdo_mysql": "*",
+    "ext-json": "*",
+    "ext-mbstring": "*",
+    "ext-openssl": "*",
+    "ext-curl": "*",
+    "ext-gd": "*",
+    "firebase/php-jwt": "^6.0",
+    "phpseclib/phpseclib": "^3.0",
+    "phpoffice/phpspreadsheet": "^1.24"
+  },
+  "require-dev": {
+    "phpunit/phpunit": "^9.5",
+    "symfony/var-dumper": "^5.4"
+  },
+  "autoload": {
+    "psr-4": {
+      "SHGM\\Core\\": "core/classes/",
+      "SHGM\\Models\\": "models/",
+      "SHGM\\Controllers\\": "controllers/",
+      "SHGM\\API\\": "api/"
+    }
+  },
+  "autoload-dev": {
+    "psr-4": {
+      "Tests\\": "tests/"
+    }
+  },
+  "scripts": {
+    "post-install-cmd": [
+      "@php -r \"if (!file_exists('.env') && file_exists('.env.example')) { copy('.env.example', '.env'); echo 'Created .env from example.'; }\""
     ],
-    "require": {
-        "php": ">=7.4.0",
-        "ext-pdo": "*",
-        "ext-pdo_mysql": "*",
-        "ext-json": "*",
-        "ext-mbstring": "*",
-        "ext-openssl": "*",
-        "ext-curl": "*",
-        "ext-gd": "*",
-        "firebase/php-jwt": "^6.0",
-        "phpseclib/phpseclib": "^3.0",
-        "phpoffice/phpspreadsheet": "^1.24"
-    },
-    "require-dev": {
-        "phpunit/phpunit": "^9.5",
-        "symfony/var-dumper": "^5.4"
-    },
-    "autoload": {
-        "psr-4": {
-            "SHGM\\Core\\": "core/classes/",
-            "SHGM\\Models\\": "models/",
-            "SHGM\\Controllers\\": "controllers/",
-            "SHGM\\API\\": "api/"
-        },
-        "files": [
-            "core/tn_autoloader.php"
-        ]
-    },
-    "autoload-dev": {
-        "psr-4": {
-            "Tests\\": "tests/"
-        }
-    },
-    "scripts": {
-        "post-install-cmd": [
-            "@php -r \"copy('.env.example', '.env');\"",
-            "echo 'Environment file created. Please configure your settings.'"
-        ],
-        "test": "phpunit tests/",
-        "serve": "php -S localhost:8000 -t .",
-        "check-syntax": "find . -name '*.php' -type f -exec php -l {} \\; | grep -v 'No syntax errors'"
-    },
-    "config": {
-        "optimize-autoloader": true,
-        "sort-packages": true,
-        "platform": {
-            "php": "7.4.0"
-        }
-    },
-    "minimum-stability": "stable",
-    "prefer-stable": true
+    "test": "phpunit tests/",
+    "serve": "php -S localhost:8000 -t .",
+    "check-syntax": "@php -r \"$it=new RecursiveIteratorIterator(new RecursiveDirectoryIterator('.')); foreach($it as $f){ if($f->isFile() && substr($f->getFilename(),-4)==='.php' && strpos($f->getPathname(), DIRECTORY_SEPARATOR.'vendor'.DIRECTORY_SEPARATOR)===false){ passthru('php -l '.escapeshellarg($f->getPathname())); } }\""
+  },
+  "config": {
+    "optimize-autoloader": true,
+    "sort-packages": true,
+    "platform": {
+      "php": "7.4.0"
+    }
+  },
+  "minimum-stability": "stable",
+  "prefer-stable": true
 }

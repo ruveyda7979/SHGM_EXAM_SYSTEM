@@ -1,57 +1,68 @@
 # SHGM Exam System - Apache Configuration
+Options -Indexes -MultiViews
 RewriteEngine On
+# Eğer uygulama bir alt klasördeyse aç ve yolu yaz:
+# RewriteBase /shgm/
 
-# Güvenlik için hassas dizinlere erişimi engelle
-<Files ".env">
+# --- Gizli / hassas dosyaları kapat (.env, composer, git, htaccess) ---
+<FilesMatch "^(?:\.env(?:\..*)?|composer\.(?:json|lock)|\.git|\.htaccess|\.htpasswd)$">
+  <IfModule mod_authz_core.c>
+    Require all denied
+  </IfModule>
+  <IfModule !mod_authz_core.c>
     Order allow,deny
     Deny from all
-</Files>
-
-<FilesMatch "^(tn_|ha_|rp_).*\.php$">
-    Order allow,deny
-    Allow from all
+  </IfModule>
 </FilesMatch>
 
-# Storage ve config klasörlerini dış erişimden koru
-RedirectMatch 403 ^/storage/.*$
-RedirectMatch 403 ^/config/.*$
-RedirectMatch 403 ^/core/.*$
-RedirectMatch 403 ^/models/.*$
-RedirectMatch 403 ^/controllers/.*$
+# --- İç dizinlere doğrudan erişimi engelle ---
+# (core, config, controllers, models, views, vendor) -> 403
+RewriteRule ^(?:core|config|controllers|models|views|vendor)/ - [F,L]
 
-# API istekleri için yönlendirme
-RewriteRule ^api/v1/(.*)$ api/index.php [QSA,L]
+# storage: yalnızca storage/public serbest; geri kalanı 403
+RewriteRule ^storage/(?!public/).*$ - [F,L]
 
-# Admin panel yönlendirmeleri
-RewriteRule ^admin/?(.*)$ index.php?route=admin/$1 [QSA,L]
+# --- API yönlendirmesi (versiyonlu) ---
+RewriteRule ^api/(v[0-9]+)/(.*)$ api/index.php [QSA,L]
 
-# Student panel yönlendirmeleri  
+# --- Panel yönlendirmeleri ---
+RewriteRule ^admin/?(.*)$   index.php?route=admin/$1   [QSA,L]
 RewriteRule ^student/?(.*)$ index.php?route=student/$1 [QSA,L]
+RewriteRule ^auth/?(.*)$    index.php?route=auth/$1    [QSA,L]
 
-# Auth yönlendirmeleri
-RewriteRule ^auth/?(.*)$ index.php?route=auth/$1 [QSA,L]
-
-# Ana route yönlendirme
+# --- Ana front-controller ---
 RewriteCond %{REQUEST_FILENAME} !-f
 RewriteCond %{REQUEST_FILENAME} !-d
 RewriteRule ^(.*)$ index.php?route=$1 [QSA,L]
 
-# Dosya yükleme limitleri
-php_value upload_max_filesize 100M
-php_value post_max_size 100M
-php_value max_execution_time 300
-php_value memory_limit 256M
+# --- PHP ayarları (yalnız mod_php'te; PHP-FPM ise yoruma al) ---
+<IfModule mod_php.c>
+  php_value upload_max_filesize 100M
+  php_value post_max_size 100M
+  php_value max_execution_time 300
+  php_value memory_limit 256M
 
-# Hata gösterimi (production'da kapatılacak)
-php_flag display_errors On
-php_flag display_startup_errors On
+  # Development'ta açık; production'da kapat
+  php_flag display_errors On
+  php_flag display_startup_errors On
 
-# Session ayarları
-php_value session.gc_maxlifetime 7200
-php_flag session.use_strict_mode On
+  php_value session.gc_maxlifetime 7200
+  php_flag session.use_strict_mode On
+</IfModule>
 
-# MIME type ayarları
+# --- MIME types ---
 AddType application/json .json
 AddType video/mp4 .mp4
 AddType audio/mpeg .mp3
 AddType audio/wav .wav
+
+# --- Statik dosya cache (opsiyonel) ---
+<IfModule mod_expires.c>
+  ExpiresActive On
+  ExpiresByType text/css "access plus 7 days"
+  ExpiresByType application/javascript "access plus 7 days"
+  ExpiresByType image/png "access plus 30 days"
+  ExpiresByType image/jpeg "access plus 30 days"
+  ExpiresByType image/webp "access plus 30 days"
+  ExpiresByType image/x-icon "access plus 1 year"
+</IfModule>
