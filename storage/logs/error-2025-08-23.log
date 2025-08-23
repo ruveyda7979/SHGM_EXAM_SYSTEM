@@ -1,0 +1,1 @@
+[2025-08-23 00:57:20] SHGM Pilot Exam System.development.error.ERROR: Call to undefined method TN_AuthMiddleware::requireCsrf() {"status":500,"file":"C:\\xampp\\htdocs\\shgm-exam-system\\index.php","line":138,"url":"/shgm-exam-system/login","method":"POST"}
