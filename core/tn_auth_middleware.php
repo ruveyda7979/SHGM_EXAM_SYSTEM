@@ -1,155 +1,78 @@
 <?php
 /**
- * SHGM Exam System - Auth Middlewares
- * -------------------------------------------------------------
- * Router ile çalışacak, "handle" eden fonksiyonlar üretir.
- * TN_Router::addRoute/get/post çağrılarına middleware olarak verilir.
- *
- * Kullanım (index.php):
- *   // sadece giriş zorunlu
- *   $router->get('profile', SomeController::class, 'index', [ TN_AuthMiddleware::auth() ]);
- *
- *   // yalnız admin/instructor
- *   $router->get('admin', TN_AdminController::class, 'dashboard',
- *       [ TN_AuthMiddleware::auth(), TN_AuthMiddleware::role(['admin','instructor']) ]);
- *
- *   // sadece misafir (giriş yapmamış) erişebilsin
- *   $router->get('login', TN_AuthController::class, 'showLogin',
- *       [ TN_AuthMiddleware::guest() ]);
+ * SHGM Exam System - Auth Middleware
+ * - handle(): giriş zorunluluğu (class adı olarak verildiğinde çağrılır)
+ * - requireRole($roles): rol kontrolü (string|array)
+ * - requireCsrf(): POST CSRF doğrulaması (tn_security.php kullanır)
+ * - requireGuest(): zaten girişliyse login sayfasına erişimi engeller
  */
 
 class TN_AuthMiddleware
 {
-    /** Ortak: oturumdan kullanıcıyı (aktifse) yükle */
-    private static function currentUser(): ?array
+    /** Giriş zorunluluğu */
+    public function handle(): bool
     {
-        // Session
-        if (!class_exists('TN_SessionManager')) return null;
-        $session = TN_SessionManager::getInstance();
-        $uid = $session->get('user_id');
-        if (!$uid) return null;
+        $sess = class_exists('TN_SessionManager')
+            ? TN_SessionManager::getInstance()
+            : null;
 
-        // DB
-        try {
-            if (class_exists('TN_Database')) {
-                /** @var PDO $pdo */
-                $pdo = TN_Database::getInstance();
-                $st = $pdo->prepare("SELECT id, name, email, role, status FROM users WHERE id = :id LIMIT 1");
-                $st->execute([':id' => (int) $uid]);
-                $row = $st->fetch(PDO::FETCH_ASSOC);
-                if ($row && (int)$row['status'] === 1) {
-                    return $row;
-                }
-            }
-        } catch (Throwable $e) {
-            // sessiz geç
+        $userId = $sess ? $sess->get('user_id') : ($_SESSION['user_id'] ?? null);
+
+        if (!$userId) {
+            $loginUrl = function_exists('tn_url') ? tn_url('login') : '/login';
+            header('Location: '.$loginUrl, true, 302);
+            return false;
         }
-        return null;
+        return true;
     }
 
-    /** Ortak: AJAX isteği mi? */
-    private static function isAjax(): bool
+    /** Rol kontrolü: 'admin' | ['admin','instructor'] ... */
+    public static function requireRole($roles): bool
     {
-        return isset($_SERVER['HTTP_X_REQUESTED_WITH']) &&
-               strtolower($_SERVER['HTTP_X_REQUESTED_WITH']) === 'xmlhttprequest';
-    }
+        $roles = (array)$roles;
 
-    /** Ortak: JSON hata bastır ve durdur */
-    private static function jsonAbort(int $code, string $message)
-    {
-        http_response_code($code);
-        header('Content-Type: application/json; charset=utf-8');
-        echo json_encode([
-            'success' => false,
-            'status_code' => $code,
-            'message' => $message,
-            'timestamp' => date('Y-m-d H:i:s'),
-        ], JSON_UNESCAPED_UNICODE | JSON_UNESCAPED_SLASHES);
-        exit;
-    }
+        $sess = class_exists('TN_SessionManager')
+            ? TN_SessionManager::getInstance()
+            : null;
 
-    /** Ortak: yönlendir ve durdur */
-    private static function redirectAbort(string $to)
-    {
-        header('Location: ' . (function_exists('tn_url') ? tn_url($to) : ('/' . ltrim($to, '/'))), true, 302);
-        exit;
-    }
+        $user = $sess ? $sess->get('user') : ($_SESSION['user'] ?? null);
+        $role = $user['role'] ?? null;
 
-    // ---------------------------------------------------------
-    // MIDDLEWARE FABRİKALARI (router bunları çağırır)
-    // ---------------------------------------------------------
-
-    /**
-     * Zorunlu giriş (oturum).
-     * Oturum yoksa: AJAX => 401 JSON, normal => /login'e yönlendir.
-     */
-    public static function auth(): callable
-    {
-        return function () {
-            $user = self::currentUser();
-            if ($user) return true;
-
-            if (self::isAjax()) {
-                self::jsonAbort(401, 'Authentication required.');
-            } else {
-                self::redirectAbort('login');
-            }
-            return false; // erişilmez
-        };
-    }
-
-    /**
-     * Sadece misafirler (giriş YAPMAMIŞ) erişebilsin.
-     * Oturum varsa /admin (veya /student/dashboard) gibi bir sayfaya atar.
-     */
-    public static function guest(string $redirect = 'admin')
-    {
-        return function () use ($redirect) {
-            $user = self::currentUser();
-            if (!$user) return true;
-
-            // Giriş yaptıysa rolüne göre yönlendir
-            $to = $redirect;
-            $role = strtolower($user['role'] ?? '');
-            if ($role === 'student') $to = 'student/dashboard';
-            self::redirectAbort($to);
+        if (!$role || !in_array($role, $roles, true)) {
+            http_response_code(403);
+            echo 'Forbidden (insufficient role).';
             return false;
-        };
+        }
+        return true;
     }
 
-    /**
-     * Rol kontrolü. Örn: role(['admin','instructor'])
-     * Uygun değilse: AJAX => 403 JSON, normal => 403 sayfası veya login.
-     */
-    public static function role(array $allowedRoles): callable
+    /** CSRF kontrolü (sadece POST rotaları için kullan) */
+    public static function requireCsrf(): bool
     {
-        $allowed = array_map('strtolower', $allowedRoles);
-
-        return function () use ($allowed) {
-            $user = self::currentUser();
-            if (!$user) {
-                if (self::isAjax()) {
-                    self::jsonAbort(401, 'Authentication required.');
-                } else {
-                    self::redirectAbort('login');
-                }
-            }
-
-            $role = strtolower($user['role'] ?? '');
-            if (in_array($role, $allowed, true)) {
-                return true;
-            }
-
-            if (self::isAjax()) {
-                self::jsonAbort(403, 'Permission denied.');
-            } else {
-                // Basit 403
-                http_response_code(403);
-                echo '<h1>403 - Permission Denied</h1>';
-                echo '<p>Bu sayfaya erişim yetkiniz yok.</p>';
-                exit;
-            }
+        // tn_security.php içindeki yardımcı:
+        $token = $_POST['csrf_token'] ?? '';
+        if (!function_exists('tn_csrf_verify') || !tn_csrf_verify($token)) {
+            http_response_code(419); // Laravel'in kullandığı gibi "expired/invalid"
+            echo 'Invalid CSRF token.';
             return false;
-        };
+        }
+        return true;
+    }
+
+    /** Guest zorunluluğu: girişliyse /admin’e yönlendir */
+    public static function requireGuest(): bool
+    {
+        $sess = class_exists('TN_SessionManager')
+            ? TN_SessionManager::getInstance()
+            : null;
+
+        $userId = $sess ? $sess->get('user_id') : ($_SESSION['user_id'] ?? null);
+
+        if ($userId) {
+            $home = function_exists('tn_url') ? tn_url('admin') : '/admin';
+            header('Location: '.$home, true, 302);
+            return false;
+        }
+        return true;
     }
 }

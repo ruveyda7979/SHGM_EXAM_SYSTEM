@@ -31,8 +31,9 @@
       <div class="error"><?= htmlspecialchars($error, ENT_QUOTES, 'UTF-8') ?></div>
     <?php endif; ?>
 
-    <form method="post" action="/auth/student-login" novalidate>
-      <input type="hidden" name="csrf_token" value="<?= htmlspecialchars($csrf_token ?? '', ENT_QUOTES, 'UTF-8') ?>">
+    <form method="post" action="<?= e(tn_url('auth/student-login')) ?>" novalidate>
+  <?= tn_csrf_input(); ?>
+
       <div class="field">
         <input type="email" name="email" placeholder="E-posta" required>
       </div>

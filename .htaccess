@@ -1,8 +1,9 @@
 # SHGM Exam System - Apache Configuration
 Options -Indexes -MultiViews
 RewriteEngine On
-# Eğer uygulama bir alt klasördeyse aç ve yolu yaz:
-# RewriteBase /shgm/
+
+# UYGULAMA ALT KLASÖRDEYSE MUTLAKA AYARLA
+RewriteBase /shgm-exam-system/
 
 # --- Gizli / hassas dosyaları kapat (.env, composer, git, htaccess) ---
 <FilesMatch "^(?:\.env(?:\..*)?|composer\.(?:json|lock)|\.git|\.htaccess|\.htpasswd)$">
@@ -16,7 +17,6 @@ RewriteEngine On
 </FilesMatch>
 
 # --- İç dizinlere doğrudan erişimi engelle ---
-# (core, config, controllers, models, views, vendor) -> 403
 RewriteRule ^(?:core|config|controllers|models|views|vendor)/ - [F,L]
 
 # storage: yalnızca storage/public serbest; geri kalanı 403
@@ -41,13 +41,10 @@ RewriteRule ^(.*)$ index.php?route=$1 [QSA,L]
   php_value post_max_size 100M
   php_value max_execution_time 300
   php_value memory_limit 256M
-
-  # Development'ta açık; production'da kapat
-  php_flag display_errors On
-  php_flag display_startup_errors On
-
+  php_flag  display_errors On
+  php_flag  display_startup_errors On
   php_value session.gc_maxlifetime 7200
-  php_flag session.use_strict_mode On
+  php_flag  session.use_strict_mode On
 </IfModule>
 
 # --- MIME types ---

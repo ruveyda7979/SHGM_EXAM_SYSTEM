@@ -1,17 +1,8 @@
 <?php
 /**
- * SHGM Exam System – Admin Giriş Sayfası (View)
- * -------------------------------------------------------------
- * Bu sayfa yalnızca HTML/JS içerir; doğrulama controller’da yapılır.
- * Controller şu değişkenleri gönderir:
- *   - $title       : Sayfa başlığı
- *   - $error       : Tek seferlik hata mesajı (flash)
- *   - $email       : Son denenen e-posta (kullanıcıya kolaylık)
- *   - $csrf_token  : CSRF koruması için gizli token
- *
- * Form action:
- *   - Router’ına göre ayarla. Biz /login POST kabul ettiğimizi varsaydık.
- *     (Controller: TN_AuthController::login())
+ * SHGM Exam System – Admin Giriş (View)
+ * Controller değişkenleri:
+ *   $title, $error, $email
  */
 ?>
 <!doctype html>
@@ -29,8 +20,7 @@
     input[type="email"],input[type="password"]{width:100%;padding:10px 12px;border:1px solid #d9dbe3;border-radius:10px;font-size:14px;outline:none}
     input:focus{border-color:#7b8cff;box-shadow:0 0 0 3px rgba(123,140,255,.15)}
     .btn{display:inline-block;width:100%;border:0;border-radius:10px;padding:11px 14px;background:#2d5bff;color:#fff;font-weight:600;font-size:14px;cursor:pointer}
-    .btn:disabled{opacity:.6;cursor:not-allowed}
-    .muted{color:#778; font-size:12px}
+    .muted{color:#778;font-size:12px}
     .error{background:#ffe6e6;color:#a00;border:1px solid #ffc6c6;padding:10px 12px;border-radius:10px;margin:8px 0}
     .footer{margin-top:14px;text-align:center}
   </style>
@@ -43,15 +33,13 @@
       <div class="error"><?= htmlspecialchars($error, ENT_QUOTES, 'UTF-8'); ?></div>
     <?php endif; ?>
 
-    <form method="post" action="login" novalidate>
-      <!-- CSRF koruması: controller/base generateCSRFToken() ile üretip gönderiyor -->
-      <input type="hidden" name="csrf_token" value="<?= htmlspecialchars($csrf_token ?? '', ENT_QUOTES, 'UTF-8'); ?>">
+    <form method="post" action="<?= tn_url('login') ?>" autocomplete="off" novalidate>
+      <?= tn_csrf_input(); ?>
 
       <div class="field">
         <label for="email">E-posta</label>
         <input id="email" name="email" type="email" autocomplete="username"
-               value="<?= htmlspecialchars($email ?? '', ENT_QUOTES, 'UTF-8'); ?>"
-               required>
+               value="<?= htmlspecialchars($email ?? '', ENT_QUOTES, 'UTF-8'); ?>" required>
       </div>
 
       <div class="field">

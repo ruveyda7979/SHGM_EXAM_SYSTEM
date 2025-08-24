@@ -19,27 +19,27 @@ class TN_AuthController extends TN_Controller
         $this->v     = new TN_Validator();
     }
 
-    /** Giriş formu */
+    /** Giriş formu (admin) */
     public function showLogin(): void
     {
         $this->render('auth/tn_login', [
-            'title'      => 'Yönetici Girişi',
-            'error'      => $this->session->flash('auth_error'),
-            'email'      => (string)$this->session->flash('auth_email'),
-            'csrf_token' => $this->generateCSRFToken(),
+            'title' => 'Yönetici Girişi',
+            'error' => $this->session->flash('auth_error'),
+            'email' => (string)$this->session->flash('auth_email'),
+            // Not: View tn_csrf_input() kullandığı için ayrıca csrf_token göndermek şart değil.
         ]);
     }
 
-    /** Giriş POST */
+    /** Giriş (POST) */
     public function login(): void
     {
-        // 1) CSRF
+        // 1) CSRF doğrulaması
         if (!$this->validateCSRFToken()) {
             $this->session->flash('auth_error', 'Oturum süresi doldu. Lütfen tekrar deneyin.');
-            $this->redirect('/login');
+            $this->redirect('login');
         }
 
-        // 2) Veri + kurallar
+        // 2) Input + kurallar
         $data = [
             'email'    => trim($_POST['email'] ?? ''),
             'password' => (string)($_POST['password'] ?? '')
@@ -48,11 +48,11 @@ class TN_AuthController extends TN_Controller
             'email'    => 'required|email',
             'password' => 'required|min:4'
         ];
-        $result = $this->v->validate($data, $rules);
-        if ($result !== true) {
+        $ok = $this->v->validate($data, $rules);
+        if ($ok !== true) {
             $this->session->flash('auth_error', 'E-posta veya şifre geçersiz.');
             $this->session->flash('auth_email', $data['email']);
-            $this->redirect('/login');
+            $this->redirect('login');
         }
 
         // 3) Model ile doğrulama
@@ -60,13 +60,13 @@ class TN_AuthController extends TN_Controller
         if (!$user) {
             $this->session->flash('auth_error', 'Giriş başarısız. Bilgileri kontrol edin.');
             $this->session->flash('auth_email', $data['email']);
-            $this->redirect('/login');
+            $this->redirect('login');
         }
 
-        // 4) Session fixation önlemi
+        // 4) Session fixation önleme
         $this->session->regenerate(true);
 
-        // 5) Base initializeAuth() 'user_id' okur → mutlaka set et
+        // 5) Oturum bilgileri
         $this->session->set('user_id', (int)$user['id']);
         $this->session->set('user', [
             'id'    => (int)$user['id'],
@@ -76,23 +76,25 @@ class TN_AuthController extends TN_Controller
         ]);
 
         // 6) (Opsiyonel) JWT
-        if (class_exists('TN_JWT_Handler')) {
-            $jwt = TN_JWT_Handler::getInstance()->createToken([
-                'uid'  => (int)$user['id'],
-                'role' => $user['role'] ?? 'student',
-                'typ'  => 'admin-web',
-            ]);
-            $this->session->set('jwt', $jwt);
-        }
+        // 6) (Opsiyonel) JWT
+if (class_exists('TN_JWT')) {
+    $jwt = TN_JWT::make([
+        'uid'  => (int)$user['id'],
+        'role' => $user['role'] ?? 'student',
+        'typ'  => 'admin-web',
+    ]);
+    $this->session->set('jwt', $jwt);
+}
 
-        // 7) Dashboard
-        $this->redirect('/');
+
+        // 7) Dashboard’a yönlendir
+        $this->redirect('admin'); // TN_Controller::redirect base path’i kendisi ekler
     }
 
     /** Çıkış */
     public function logout(): void
     {
         $this->session->destroy();
-        $this->redirect('/login');
+        $this->redirect('login');
     }
 }
